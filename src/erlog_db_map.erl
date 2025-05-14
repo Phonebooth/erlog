@@ -81,7 +81,7 @@ assertz_clause(Db, Functor, Head, Body) ->
 %%  Retract (remove) the clause with tag ClauseTag from the list of
 %%  clauses of Functor.
 
-retract_clause(Db, Functor, Tag) ->
+retract_clause(Db, Functor, Tag) when is_integer(Tag) ->
     case maps:find(Functor, Db) of
 	{ok,{clauses,Nt,Cs}} ->			%We can retract here
 	    Db1 = maps:put(Functor,
@@ -89,6 +89,16 @@ retract_clause(Db, Functor, Tag) ->
 	    {ok,Db1};
 	{ok,_} -> error;			%We can't retract here
 	error -> {ok,Db}			%Do nothing
+    end;
+%% retract_clause when the tag is not known - useful for dynamic clauses
+retract_clause(Db, Functor, Clause) ->
+    case maps:find(Functor, Db) of
+        {ok, {clauses, Nt, Cs}} ->
+	        Db1 = maps:put(Functor,
+			     {clauses,Nt,lists:keydelete(Clause, 2, Cs)}, Db),
+            {ok,Db1};
+        {ok,_} -> error;
+        error -> {ok, Db}
     end.
 
 %% abolish_clause(Db, Functor) -> {ok,NewDb} | error.

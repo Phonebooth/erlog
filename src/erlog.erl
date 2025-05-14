@@ -37,7 +37,8 @@
 -export([new/0,new/2,
 	 prove/2,next_solution/1,
 	 consult/2,reconsult/2,load/2,
-	 get_db/1,set_db/2,set_db/3]).
+	 get_db/1,set_db/2,set_db/3, assertz/2, 
+     asserta/2, retract/3, retractall/2]).
 %% User utilities.
 -export([is_legal_term/1,vars_in/1]).
 
@@ -96,6 +97,28 @@ set_db(Ref, #erlog{est=St}=Erl) ->
 set_db(Mod, Ref, #erlog{est=St}=Erl) ->
     #est{db=Db0} = St,
     Db1 = Db0#db{mod=Mod,ref=Ref},
+    Erl#erlog{est=St#est{db=Db1}}.
+
+%% dynamic clause support
+
+assertz(Clause, #erlog{est=St}=Erl) ->
+    #est{db=Db0} = St,
+    Db1 = erlog_int:assertz_clause(Clause, Db0),
+    Erl#erlog{est=St#est{db=Db1}}.
+
+asserta(Clause, #erlog{est=St}=Erl) ->
+    #est{db=Db0} = St,
+    Db1 = erlog_int:asserta_clause(Clause, Db0),
+    Erl#erlog{est=St#est{db=Db1}}.
+
+retract(Functor, Clause, #erlog{est=St}=Erl) ->
+    #est{db=Db0} = St,
+    Db1 = erlog_int:retract_clause(Functor, Clause, Db0),
+    Erl#erlog{est=St#est{db=Db1}}.
+
+retractall(Functor, #erlog{est=St}=Erl) ->
+    #est{db=Db0} = St,
+    Db1 = erlog_int:abolish_clauses(Functor, Db0),
     Erl#erlog{est=St#est{db=Db1}}.
 
 %% Internal functions.
