@@ -38,11 +38,16 @@
 	 prove/2,next_solution/1,
 	 consult/2,reconsult/2,load/2,
 	 get_db/1,set_db/2,set_db/3, assertz/2, 
-     asserta/2, retract/3, retractall/2]).
+     asserta/2, retract/3, retractall/2, listing/1]).
 %% User utilities.
 -export([is_legal_term/1,vars_in/1]).
 
 -import(lists, [foldl/3,foreach/2]).
+
+-define(Builtins, [{phrase, 2}, 
+                    {last, 2}, 
+                    {perm, 2},
+                    {delete,3}]).
 
 %% -compile(export_all).
 
@@ -120,6 +125,48 @@ retractall(Functor, #erlog{est=St}=Erl) ->
     #est{db=Db0} = St,
     Db1 = erlog_int:abolish_clauses(Functor, Db0),
     Erl#erlog{est=St#est{db=Db1}}.
+
+%% dump a listing of all facts/rules that are user specific
+listing(#erlog{est=St}) ->
+    #db{mod=erlog_db_map, ref=Ref} = St#est.db,
+    Funcs = maps:fold(fun(_, built_in, Acc) ->
+                            Acc;
+                          (_, {code, _}, Acc) ->
+                            Acc;
+                          (F, V, Acc) ->
+                            case lists:member(F, ?Builtins) of
+                                true -> 
+                                    Acc;
+                                false ->
+                                    [{F, V}|Acc]
+                            end
+                        end, [], Ref),
+    list_funcs(Funcs, []).
+
+list_funcs([], Result) ->
+    Result;
+list_funcs([{_, V}|R], Result) ->
+    {clauses, _, Clauses} = V,
+    L = list_clauses(Clauses, []),
+    list_funcs(R, L ++ Result). 
+
+list_clauses([], Result) ->
+    Result;
+list_clauses([{_, Head, {Body, false}}|R], Result) ->
+    Clause = list_clause(Head, Body),
+    list_clauses(R, Result ++ Clause).
+
+list_clause(Head, []) ->
+    lists:flatten(erlog_io:write_term1(Head, [])) ++ ".\n";
+list_clause(Head, Body) ->
+    lists:flatten(erlog_io:write_term1(Head, [])) ++ " :- " ++ list_body(Body, "") ++ ".\n".
+
+list_body([], Result) ->
+    Result;
+list_body([B|R], []) ->
+    list_body(R, lists:flatten(erlog_io:write_term1(B, [])));
+list_body([B|R], Result) ->
+    list_body(R, Result ++ ",\n" ++ lists:flatten(erlog_io:write_term1(B, []))).
 
 %% Internal functions.
 
