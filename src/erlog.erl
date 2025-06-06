@@ -127,8 +127,7 @@ retractall(Functor, #erlog{est=St}=Erl) ->
     Erl#erlog{est=St#est{db=Db1}}.
 
 %% dump a listing of all facts/rules that are user specific
-listing(#erlog{est=St}) ->
-    #db{mod=erlog_db_map, ref=Ref} = St#est.db,
+listing(#erlog{est=#est{db=#db{mod=erlog_db_map, ref=Ref}}}) ->
     Funcs = maps:fold(fun(_, built_in, Acc) ->
                             Acc;
                           (_, {code, _}, Acc) ->
@@ -139,6 +138,20 @@ listing(#erlog{est=St}) ->
                                     Acc;
                                 false ->
                                     [{F, V}|Acc]
+                            end
+                        end, [], Ref),
+    list_funcs(Funcs, []);
+listing(#erlog{est=#est{db=#db{mod=erlog_db_ets, ref=Ref}}}) ->
+    Funcs = ets:foldl(fun({_, built_in}, Acc) ->
+                            Acc;
+                          ({_, code, _}, Acc) ->
+                            Acc;
+                          ({F, clauses, A, V}, Acc) ->
+                            case lists:member(F, ?Builtins) of
+                                true -> 
+                                    Acc;
+                                false ->
+                                    [{F, {clauses, A, V}}|Acc]
                             end
                         end, [], Ref),
     list_funcs(Funcs, []).

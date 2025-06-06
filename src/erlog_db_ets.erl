@@ -35,7 +35,12 @@
 %% new(InitArgs) -> Db.
 
 new(Name) ->
-    ets:new(Name, [named_table,set,protected,{keypos,1}]).
+    case ets:info(Name) of
+        undefined ->
+            ets:new(Name, [named_table,set,protected,{keypos,1}]);
+        _ ->
+            Name
+    end.
 
 %% add_built_in(Db, Functor) -> NewDb.
 %%  Add Functor as a built-in in the database.
