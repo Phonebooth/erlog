@@ -217,6 +217,9 @@ write_term1(T, _, Ops) when is_tuple(T) ->
     [F,A1|As] = tuple_to_list(T),
     [write_term1(F, 1200, Ops),
      $(,write_term1(A1, 999, Ops),write_tail1(As, Ops),$)];
+write_term1(T, _, Ops) when is_binary(T) ->
+    Bcs = binary_to_list(T),
+    Bcs;
 write_term1(T, _, _) ->                         %Else use default Erlang.
     io_lib:write(T).
 
