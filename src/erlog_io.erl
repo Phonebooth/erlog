@@ -125,7 +125,7 @@ read_string([], Result) ->
     {ok, lists:reverse(Result)};
 read_string(Tokens, Result) ->
     case erlog_parse:term(Tokens) of
-        {ok,T} -> {ok,[T|Result]};
+        {ok,T} -> read_string([], [T|Result]);
         {ok,T,Cont} -> read_string(Cont, [T|Result]);
         {error,Pe} -> {error,Pe}
     end.

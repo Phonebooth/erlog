@@ -239,6 +239,7 @@ expect([], Tok, _, _) -> syntax_error(9999, {expected,Tok}).
 cp([C|Cs]) ->
     case C() of
 	{succeed,Res} -> {succeed,Res};
+	{{succeed,Res}, Toks} -> {{succeed,Res}, Toks};
 	{fail,_}=Fail -> cp(Cs, Fail);		%Try rest with first fail
 	fail -> cp(Cs)				%Stay till we get reason
     end.
@@ -246,6 +247,7 @@ cp([C|Cs]) ->
 cp([C|Cs], Fail) ->
     case C() of
 	{succeed,Res} -> {succeed,Res};
+	{{succeed,Res}, Toks} -> {{succeed,Res}, Toks};
 	{fail,_} -> cp(Cs, Fail);		%Drop this fail, use first
 	fail -> cp(Cs, Fail)
     end;
