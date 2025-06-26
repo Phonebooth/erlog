@@ -37,10 +37,12 @@ term(Toks) -> term(Toks, 1).
 term(Toks, _) ->
     case term(Toks, 1200, fun(Ts, T) -> all_read(Ts, T) end) of
 	{succeed,Term} -> {ok,Term};
+	{{succeed,Term}, RToks} -> {ok, Term, RToks};
 	{fail,{Line,Error}} -> {error,{Line,?MODULE,Error}}
     end.
 
 all_read([{'.',_}], Term) -> {succeed,Term};
+all_read([{'.',_}|Toks], Term) -> {{succeed,Term}, Toks};
 all_read([{T,L}|_], _) -> syntax_error(L, {operator_expected,T});
 all_read([{_,L,V}|_], _) -> syntax_error(L, {operator_expected,V});
 all_read([], _) -> syntax_error(9999, premature_end).

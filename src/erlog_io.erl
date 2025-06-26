@@ -117,11 +117,17 @@ scan_erlog_term(Io, Prompt, Line) ->
 read_string(Cs) ->
     case erlog_scan:string(Cs ++ " ", 1) of     %Ensure ending space
         {ok,Ts,_} ->
-            case erlog_parse:term(Ts) of
-                {ok,T} -> {ok,T};
-                {error,Pe} -> {error,Pe}
-            end;
+            read_string(Ts, []);
         {error,Se,_} -> {error,Se}
+    end.
+
+read_string([], Result) ->
+    {ok, lists:reverse(Result)};
+read_string(Tokens, Result) ->
+    case erlog_parse:term(Tokens) of
+        {ok,T} -> {ok,[T|Result]};
+        {ok,T,Cont} -> read_string(Cont, [T|Result]);
+        {error,Pe} -> {error,Pe}
     end.
 
 %% write_term([IoDevice,] Term, WriteOptions) -> ok.
