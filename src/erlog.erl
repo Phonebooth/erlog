@@ -38,7 +38,7 @@
 	 prove/2,next_solution/1,
 	 consult/2,reconsult/2,load/2,
 	 get_db/1,set_db/2,set_db/3, assertz/2, 
-     asserta/2, retract/3, retractall/2, listing/1]).
+     asserta/2, retract/3, retractall/2, listing/1, listing/2]).
 %% User utilities.
 -export([is_legal_term/1,vars_in/1]).
 
@@ -127,34 +127,51 @@ retractall(Functor, #erlog{est=St}=Erl) ->
     Erl#erlog{est=St#est{db=Db1}}.
 
 %% dump a listing of all facts/rules that are user specific
-listing(#erlog{est=#est{db=#db{mod=erlog_db_map, ref=Ref}}}) ->
+%%
+listing(Db) ->
+    listing(Db, []).
+
+listing(#erlog{est=#est{db=#db{mod=erlog_db_map, ref=Ref}}}, Filter) ->
     Funcs = maps:fold(fun(_, built_in, Acc) ->
                             Acc;
                           (_, {code, _}, Acc) ->
                             Acc;
                           (F, V, Acc) ->
-                            case lists:member(F, ?Builtins) of
-                                true -> 
+                            case include_in_listing(F, Filter) of
+                                false -> 
                                     Acc;
-                                false ->
+                                true ->
                                     [{F, V}|Acc]
                             end
                         end, [], Ref),
     list_funcs(Funcs, []);
-listing(#erlog{est=#est{db=#db{mod=erlog_db_ets, ref=Ref}}}) ->
+listing(#erlog{est=#est{db=#db{mod=erlog_db_ets, ref=Ref}}}, Filter) ->
     Funcs = ets:foldl(fun({_, built_in}, Acc) ->
                             Acc;
                           ({_, code, _}, Acc) ->
                             Acc;
                           ({F, clauses, A, V}, Acc) ->
-                            case lists:member(F, ?Builtins) of
-                                true -> 
+                            case include_in_listing(F, Filter) of
+                                false -> 
                                     Acc;
-                                false ->
+                                true ->
                                     [{F, {clauses, A, V}}|Acc]
                             end
                         end, [], Ref),
     list_funcs(Funcs, []).
+
+include_in_listing(F={P, _}, Filter) ->
+    case lists:member(F, ?Builtins) of
+        true ->
+            false;
+        false ->
+            case Filter of 
+                [] ->
+                    true;
+                _ ->
+                    lists:member(P, Filter)
+            end
+    end.
 
 list_funcs([], Result) ->
     Result;
