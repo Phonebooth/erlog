@@ -18,21 +18,30 @@
 
 -module(erlog_shell).
 
--export([start/0,start/2,server/0,server/2]).
+-export([start/0,start/1,start/2,server/0,server/1,server/2]).
 
 -import(lists, [foldl/3,foreach/2]).
 
-start() -> spawn(fun () -> server() end).
+start() -> 
+    spawn(fun () -> server() end).
 
-start(M, A) -> spawn(fun () -> server(M, A) end).
+start(M, A) -> 
+    spawn(fun () -> server(M, A) end).
 
-server() -> server(erlog_db_dict, null).
+start(Erl) -> 
+    spawn(fun () -> server(Erl) end).
 
-server(M, A) ->
+server() -> 
+    server(erlog_db_dict, null).
+
+server(Erl) -> 
     io:fwrite("Erlog Shell V~s (abort with ^G)\n",
 	      [erlang:system_info(version)]),
-    {ok,Erl} = erlog:new(M, A),
     server_loop(Erl).
+
+server(M, A) ->
+    {ok,Erl} = erlog:new(M, A),
+    server(Erl).
 
 %% A simple Erlog shell similar to a "normal" Prolog shell. It allows
 %% user to enter goals, see resulting bindings and request next
