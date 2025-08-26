@@ -65,7 +65,7 @@ format_error({expected,T}) ->
 %% term(Tokens, Precedence, Next) -> {succeed,Term} | {fail,Error}.
 
 term([{number,_,N}|Toks], Prec, Next) -> rest_term(Toks, N, 0, Prec, Next);
-term([{string,_,S}|Toks], Prec, Next) -> rest_term(Toks, S, 0, Prec, Next);
+term([{string,_,S}|Toks], Prec, Next) -> rest_term(Toks, list_to_binary(S), 0, Prec, Next);
 term([{'(',_}|Toks], Prec, Next) ->
     bracket_term(Toks, Prec, Next);
 term([{' (',_}|Toks], Prec, Next) ->
