@@ -326,6 +326,20 @@ prove_goal({assertz,C0}, Next, #est{bs=Bs,db=Db0}=St) ->
 prove_goal({retract,C0}, Next, #est{bs=Bs}=St) ->
     C = dderef(C0, Bs),
     prove_retract(C, Next, St);
+prove_goal({retractall,C0}, Next, #est{bs=Bs,db=Db0}=St) ->
+    C = dderef(C0, Bs),
+    {H,B} = case C of
+		{':-',H0,B0} -> {H0,B0};
+		H0 -> {H0,true}
+	    end,
+    Functor = functor(H),
+    Db1 = case get_procedure(Functor, Db0) of
+	      {clauses,Cs} -> retractall_clauses(H, B, Cs, Functor, Db0);
+	      undefined -> Db0;
+	      _ -> permission_error(modify, static_procedure,
+				    pred_ind(Functor), St)
+	  end,
+    prove_body(Next, St#est{db=Db1});
 
 %% Process controll
 prove_goal({halt,C0}, _Next, #est{bs=Bs}) ->
@@ -675,6 +689,18 @@ retract_clauses(_Ch, _Cb, [], _Next, St) -> ?FAIL(St).
 
 fail_retract(#cp{data={Ch,Cb,Cs},next=Next,bs=Bs,vn=Vn}, Cps, St) ->
     retract_clauses(Ch, Cb, Cs, Next, St#est{cps=Cps,bs=Bs,vn=Vn}).
+
+%% retractall_clauses(Head, Body, Clauses, Functor, Db) -> NewDb.
+%%  Retract all clauses whose head unifies with Head (and body with Body).
+%%  Always succeeds, even if no clauses match.
+
+retractall_clauses(Ch, Cb, [C|Cs], Functor, Db0) ->
+    Db1 = case unify_clause(Ch, Cb, C, new_bindings(), 0) of
+	      {succeed,_,_} -> retract_clause(Functor, element(1, C), Db0);
+	      fail -> Db0
+	  end,
+    retractall_clauses(Ch, Cb, Cs, Functor, Db1);
+retractall_clauses(_Ch, _Cb, [], _Functor, Db) -> Db.
 
 %% prove_findall(Term, Goal, List, Next, State) ->
 %%     void.
