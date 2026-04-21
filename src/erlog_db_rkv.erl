@@ -33,7 +33,7 @@
 %% new(InitArgs) -> Db.
 
 new(Name) ->
-    raptor_kv:new(Name),
+    raptor_kv:new(Name, []),
     Name.
 
 %% add_built_in(Db, Functor) -> NewDb.
