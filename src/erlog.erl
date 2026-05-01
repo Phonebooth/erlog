@@ -38,7 +38,8 @@
 	 prove/2,next_solution/1,
 	 consult/2,reconsult/2,load/2,
 	 get_db/1,set_db/2,set_db/3, assertz/2, 
-     asserta/2, retract/3, retractall/2, listing/1, listing/2]).
+     asserta/2, retract/3, retractall/2, listing/1, listing/2,
+    clauses/1, clauses/2]).
 %% User utilities.
 -export([is_legal_term/1,vars_in/1]).
 
@@ -131,34 +132,42 @@ retractall(Functor, #erlog{est=St}=Erl) ->
 listing(Db) ->
     listing(Db, []).
 
-listing(#erlog{est=#est{db=#db{mod=erlog_db_map, ref=Ref}}}, Filter) ->
-    Funcs = maps:fold(fun(_, built_in, Acc) ->
-                            Acc;
-                          (_, {code, _}, Acc) ->
-                            Acc;
-                          (F, V, Acc) ->
-                            case include_in_listing(F, Filter) of
-                                false -> 
-                                    Acc;
-                                true ->
-                                    [{F, V}|Acc]
-                            end
-                        end, [], Ref),
-    list_funcs(Funcs, []);
-listing(#erlog{est=#est{db=#db{mod=erlog_db_ets, ref=Ref}}}, Filter) ->
-    Funcs = ets:foldl(fun({_, built_in}, Acc) ->
-                            Acc;
-                          ({_, code, _}, Acc) ->
-                            Acc;
-                          ({F, clauses, A, V}, Acc) ->
-                            case include_in_listing(F, Filter) of
-                                false -> 
-                                    Acc;
-                                true ->
-                                    [{F, {clauses, A, V}}|Acc]
-                            end
-                        end, [], Ref),
-    list_funcs(Funcs, []).
+listing(Erl, Filter) ->
+    list_funcs(collect_user_funcs(Erl, Filter), []).
+
+%% Return a structured map of all user-defined clauses.
+%% Map key is {Functor, Arity}; value is a list of #{head => Head, body => Body}.
+clauses(Db) -> clauses(Db, []).
+
+clauses(Erl, Filter) ->
+    funcs_to_map(collect_user_funcs(Erl, Filter), #{}).
+
+%% Collect user-defined predicates from the database, applying the listing filter.
+%% Returns [{Functor, {clauses, Arity, ClauseList}}].
+collect_user_funcs(#erlog{est=#est{db=#db{mod=erlog_db_map, ref=Ref}}}, Filter) ->
+    maps:fold(fun(_, built_in, Acc) -> Acc;
+                 (_, {code, _}, Acc) -> Acc;
+                 (F, V, Acc) ->
+                      case include_in_listing(F, Filter) of
+                          false -> Acc;
+                          true  -> [{F, V} | Acc]
+                      end
+              end, [], Ref);
+collect_user_funcs(#erlog{est=#est{db=#db{mod=erlog_db_ets, ref=Ref}}}, Filter) ->
+    ets:foldl(fun({_, built_in}, Acc) -> Acc;
+                 ({_, code, _}, Acc) -> Acc;
+                 ({F, clauses, A, V}, Acc) ->
+                      case include_in_listing(F, Filter) of
+                          false -> Acc;
+                          true  -> [{F, {clauses, A, V}} | Acc]
+                      end
+              end, [], Ref).
+
+funcs_to_map([], Acc) -> Acc;
+funcs_to_map([{F, {clauses, _Arity, Clauses}} | R], Acc) ->
+    Entries = [#{head => Head, body => Body}
+               || {_Tag, Head, {Body, false}} <- Clauses],
+    funcs_to_map(R, Acc#{F => Entries}).
 
 include_in_listing(F={P, _}, Filter) ->
     case lists:member(F, ?Builtins) of
